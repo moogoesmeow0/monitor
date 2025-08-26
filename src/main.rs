@@ -50,11 +50,11 @@ async fn watch(shared_state: shared::SharedState) -> Result<(), Box<dyn std::err
         if let Ok(mut guard) = shared_state.write() {
             guard.update_points(new_data);
         } else {
-            return Err(Box::new(todo!()));
+            return Err(Box::new(util::Error::StateGuardError));
         }
     }
 
-    let _ = &plot::plot()?;
+    let _ = &plot::plot(shared_state.clone())?;
 
     let (std_tx, std_rx) = std::sync::mpsc::channel();
 
@@ -62,9 +62,7 @@ async fn watch(shared_state: shared::SharedState) -> Result<(), Box<dyn std::err
         let _ = std_tx.send(res);
     })?;
 
-    watcher
-        .watch(Path::new("./data.csv"), RecursiveMode::Recursive)
-        .unwrap();
+    watcher.watch(Path::new("./data.csv"), RecursiveMode::Recursive)?;
 
     // Bridge the std channel to tokio in a separate task
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
@@ -83,14 +81,22 @@ async fn watch(shared_state: shared::SharedState) -> Result<(), Box<dyn std::err
                     println!("File changed: {:?}", event.paths);
 
                     if let Ok(new_data) = util::read() {
-                        shared_state.write().unwrap().update_points(new_data);
-                        println!(
-                            "Updated shared state with {} points",
-                            shared_state.read().unwrap().points.len()
-                        );
+                        if let Ok(mut guard) = shared_state.write() {
+                            guard.update_points(new_data);
+                        } else {
+                            return Err(Box::new(util::Error::StateGuardError));
+                        }
+
+                        println!("Updated shared state with {} points", {
+                            if let Ok(guard) = shared_state.write() {
+                                guard.points.len()
+                            } else {
+                                return Err(Box::new(util::Error::StateGuardError));
+                            }
+                        });
                     }
 
-                    let _ = &plot::plot()?;
+                    let _ = &plot::plot(shared_state.clone())?;
                 } else if event.kind.is_remove() {
                     println!("File removed: {:?}", event.paths);
                     return Err(Box::new(util::Error::FileRemoved));

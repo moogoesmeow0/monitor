@@ -6,6 +6,7 @@ pub enum Error {
     Generic(String),
     FileRemoved,
     ImageSizeError(String),
+    StateGuardError,
 }
 
 impl std::fmt::Display for Error {
@@ -14,6 +15,7 @@ impl std::fmt::Display for Error {
             Error::Generic(msg) => write!(f, "Error: {}", msg),
             Error::FileRemoved => write!(f, "File was removed"),
             Error::ImageSizeError(msg) => write!(f, "Image size error, {}", msg),
+            Error::StateGuardError => write!(f, "Shared state access error"),
         }
     }
 }

@@ -8,7 +8,7 @@ use std::path::Path;
 
 #[get("/")]
 async fn serve_image() -> Option<NamedFile> {
-    NamedFile::open(Path::new("./output.jpeg")).await.ok()
+    NamedFile::open(Path::new("./output.png")).await.ok()
 }
 
 #[get("/data")]
@@ -26,7 +26,7 @@ fn get_stats(
     match shared_state.read() {
         Ok(data) => {
             return Ok(Json(serde_json::json!({
-                "point_count": data.points.len(),
+                "point_count": data.points.len() + 1,
                 "last_updated": data.last_updated
             })));
         }

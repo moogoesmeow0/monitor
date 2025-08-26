@@ -1,11 +1,12 @@
-use image::{GenericImageView, ImageBuffer, ImageReader, Rgba, RgbaImage};
+use image::{GenericImageView, ImageBuffer, ImageReader, Pixel, Rgba, RgbaImage};
 use rayon::prelude::*;
 use std::time::Instant;
 
 use crate::math::flatten;
+use crate::shared::SharedState;
 use crate::util::{CAM_ANGLE, CAM_HEIGHT, DATA_PATH, Error, FOV, VIEW_HEIGHT, VIEW_WIDTH, read};
 
-pub fn plot() -> Result<(), Box<dyn std::error::Error>> {
+pub fn plot(state: SharedState) -> Result<(), Box<dyn std::error::Error>> {
     let width = 1920;
     let height = 1080;
 
@@ -27,9 +28,9 @@ pub fn plot() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Background fill: {:?}", start.elapsed());
 
-    grid(&mut img, width, height, 30)?;
+    grid(&mut img, 30, state)?;
 
-    draw_points(&mut img, &world_coords, width, height)?;
+    draw_points(&mut img, &world_coords)?;
 
     let start = Instant::now();
     save(&img, "output.png")?;
@@ -75,10 +76,13 @@ pub fn save(img: &RgbaImage, path: &str) -> Result<(), Box<dyn std::error::Error
 
 pub fn grid(
     img: &mut RgbaImage,
-    width: u32,
-    height: u32,
     cell_size: u32,
+    state: SharedState,
 ) -> Result<(), Box<dyn std::error::Error>> {
+
+    let width = img.width();
+    let height = img.height();
+
     for x in (0..width).step_by(cell_size as usize) {
         for y in 0..height {
             img.put_pixel(x, y, Rgba([0, 255, 0, 255])); // green vertical lines
@@ -97,17 +101,18 @@ pub fn grid(
 pub fn draw_points(
     img: &mut RgbaImage,
     points: &Vec<(f64, f64)>,
-    width: u32,
-    height: u32,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let width = img.width();
+    let height = img.height();
+
     for &(x, y) in points {
         // Camera is now at center bottom of image
         let pixel_x = ((x + 1.0) * (width as f64 / 2.0)) as u32;
         let pixel_y = (height as f64 - (y * (height as f64 / 2.0))) as u32;
 
         if pixel_x < width && pixel_y < height {
-            img.put_pixel(pixel_x, pixel_y, Rgba([255, 0, 0, 255])); // red points
-            //circle(img, 5.0, (pixel_x, pixel_y), (255, 0, 0, 255)); // red points
+            img.put_pixel(pixel_x, pixel_y, Rgba([255, 0, 0, 255])); 
+            //circle(img, 5.0, (pixel_x, pixel_y), (255, 0, 0, 255)); 
         }
     }
 
