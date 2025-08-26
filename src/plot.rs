@@ -85,13 +85,13 @@ pub fn grid(
 
     for x in (0..width).step_by(cell_size as usize) {
         for y in 0..height {
-            img.put_pixel(x, y, Rgba([0, 255, 0, 255])); // green vertical lines
+            img.put_pixel(x, y, Rgba([0, 255, 0, 255]));
         }
     }
 
     for y in (0..height).step_by(cell_size as usize) {
         for x in 0..width {
-            img.put_pixel(x, y, Rgba([0, 255, 0, 255])); // green horizontal lines
+            img.put_pixel(x, y, Rgba([0, 255, 0, 255]));
         }
     }
 
