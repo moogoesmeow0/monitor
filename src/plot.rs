@@ -1,28 +1,30 @@
-use image::{ImageBuffer, Rgba, RgbaImage};
+use image::{GenericImageView, ImageBuffer, ImageReader, Rgba, RgbaImage};
 use rayon::prelude::*;
 use std::time::Instant;
 
 use crate::math::flatten;
-use crate::util::{CAM_ANGLE, CAM_HEIGHT, DATA_PATH, FOV, VIEW_HEIGHT, VIEW_WIDTH, read};
+use crate::util::{CAM_ANGLE, CAM_HEIGHT, DATA_PATH, Error, FOV, VIEW_HEIGHT, VIEW_WIDTH, read};
 
 pub fn plot() -> Result<(), Box<dyn std::error::Error>> {
     let width = 1920;
     let height = 1080;
-    
+
     let start = Instant::now();
     let mut img: RgbaImage = ImageBuffer::new(width, height);
     println!("Image creation: {:?}", start.elapsed());
-    
+
     let start = Instant::now();
     let points = read()?;
     println!("Reading data: {:?}", start.elapsed());
-    
+
     let start = Instant::now();
     let world_coords = flatten(CAM_HEIGHT, CAM_ANGLE, VIEW_WIDTH, VIEW_HEIGHT, FOV, &points);
     println!("Flattening: {:?}", start.elapsed());
 
     let start = Instant::now();
-    bg((255, 255, 255, 255), &mut img);
+    //bg((255, 255, 255, 255), &mut img);
+    img_bg(&mut img, "room.png")?;
+
     println!("Background fill: {:?}", start.elapsed());
 
     grid(&mut img, width, height, 30)?;
@@ -32,7 +34,7 @@ pub fn plot() -> Result<(), Box<dyn std::error::Error>> {
     let start = Instant::now();
     save(&img, "output.png")?;
     println!("Saving: {:?}", start.elapsed());
-    
+
     println!("done");
 
     Ok(())
@@ -45,6 +47,26 @@ pub fn bg(color: (u8, u8, u8, u8), img: &mut RgbaImage) {
     });
 }
 
+pub fn img_bg(img: &mut RgbaImage, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let bg_img = ImageReader::open(path)?.decode()?;
+
+    if bg_img.width() != img.width() || bg_img.height() != img.height() {
+        return Err(Box::new(Error::ImageSizeError(format!(
+            "Background image size does not match: expected {}x{}, got {}x{}",
+            img.width(),
+            img.height(),
+            bg_img.width(),
+            bg_img.height()
+        ))));
+    }
+
+    img.par_enumerate_pixels_mut().for_each(|(x, y, pixel)| {
+        let bg_pixel = bg_img.get_pixel(x, y);
+        *pixel = Rgba([bg_pixel[0], bg_pixel[1], bg_pixel[2], bg_pixel[3]]);
+    });
+
+    Ok(())
+}
 
 pub fn save(img: &RgbaImage, path: &str) -> Result<(), Box<dyn std::error::Error>> {
     img.save(path)?;
@@ -79,17 +101,18 @@ pub fn draw_points(
     height: u32,
 ) -> Result<(), Box<dyn std::error::Error>> {
     for &(x, y) in points {
+        // Camera is now at center bottom of image
         let pixel_x = ((x + 1.0) * (width as f64 / 2.0)) as u32;
-        let pixel_y = ((1.0 - y) * (height as f64 / 2.0)) as u32;
+        let pixel_y = (height as f64 - (y * (height as f64 / 2.0))) as u32;
 
         if pixel_x < width && pixel_y < height {
             img.put_pixel(pixel_x, pixel_y, Rgba([255, 0, 0, 255])); // red points
+            //circle(img, 5.0, (pixel_x, pixel_y), (255, 0, 0, 255)); // red points
         }
     }
 
     Ok(())
 }
-
 
 fn circle(img: &mut RgbaImage, radius: f32, center: (u32, u32), color: (u8, u8, u8, u8)) {
     let rgba = Rgba([color.0, color.1, color.2, color.3]);

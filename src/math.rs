@@ -49,6 +49,5 @@ pub fn flatten(
 
             Some((lateral_distance, forward_distance))
         })
-    .collect::<Vec<(f64, f64)>>()
-
+        .collect::<Vec<(f64, f64)>>();
 }

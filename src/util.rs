@@ -1,9 +1,11 @@
 use csv::Reader;
+use crate::shared::{SharedState, new_shared_state};
 
 #[derive(Debug)]
 pub enum Error {
     Generic(String),
     FileRemoved,
+    ImageSizeError(String),
 }
 
 impl std::fmt::Display for Error {
@@ -11,12 +13,12 @@ impl std::fmt::Display for Error {
         match self {
             Error::Generic(msg) => write!(f, "Error: {}", msg),
             Error::FileRemoved => write!(f, "File was removed"),
+            Error::ImageSizeError(msg) => write!(f, "Image size error, {}", msg),
         }
     }
 }
 
 impl std::error::Error for Error {}
-
 
 pub fn read() -> Result<Vec<(i32, i32)>, Box<dyn std::error::Error>> {
     let mut reader = Reader::from_path(DATA_PATH)?;
@@ -40,3 +42,4 @@ pub const CAM_ANGLE: f64 = 45.0;
 pub const VIEW_WIDTH: f64 = 640.0;
 pub const VIEW_HEIGHT: f64 = 480.0;
 pub const FOV: f64 = 90.0;
+

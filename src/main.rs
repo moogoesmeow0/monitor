@@ -11,15 +11,28 @@ use tokio::time::sleep;
 mod math;
 mod plot;
 mod server;
-mod util;
+mod shared;
+mod util; // Add this
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("{}", util::read()?.len());
-    let file_watcher = watch();
+    // Create shared state
+    let shared_state = shared::new_shared_state();
 
+    // Initialize with current data
+    if let Ok(initial_data) = util::read() {
+        if let Ok(mut guard) = shared_state.write() {
+            guard.update_points(initial_data);
+        }
+    }
+
+    if let Ok(points) = shared_state.read() {
+        println!("{}", points.points.len());
+    }
+
+    let file_watcher = watch(shared_state.clone());
     let rocket_server = async {
-        if let Err(e) = server::rocket().launch().await {
+        if let Err(e) = server::rocket(shared_state.clone()).launch().await {
             eprintln!("Rocket server error: {}", e);
         }
     };
@@ -32,7 +45,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn watch() -> Result<(), Box<dyn std::error::Error>> {
+async fn watch(shared_state: shared::SharedState) -> Result<(), Box<dyn std::error::Error>> {
+    if let Ok(new_data) = util::read() {
+        if let Ok(mut guard) = shared_state.write() {
+            guard.update_points(new_data);
+        } else {
+            return Err(Box::new(todo!()));
+        }
+    }
+
+    let _ = &plot::plot()?;
+
     let (std_tx, std_rx) = std::sync::mpsc::channel();
 
     let mut watcher = notify::recommended_watcher(move |res| {
@@ -58,6 +81,15 @@ async fn watch() -> Result<(), Box<dyn std::error::Error>> {
             Ok(event) => {
                 if event.kind.is_modify() || event.kind.is_create() {
                     println!("File changed: {:?}", event.paths);
+
+                    if let Ok(new_data) = util::read() {
+                        shared_state.write().unwrap().update_points(new_data);
+                        println!(
+                            "Updated shared state with {} points",
+                            shared_state.read().unwrap().points.len()
+                        );
+                    }
+
                     let _ = &plot::plot()?;
                 } else if event.kind.is_remove() {
                     println!("File removed: {:?}", event.paths);
