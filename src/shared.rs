@@ -1,9 +1,11 @@
 use std::sync::{Arc, RwLock};
+use rocket::time::{self, macros::datetime, Date, Time};
 use serde::Serialize;
+use chrono::prelude::*;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SharedData {
-    pub points: Vec<(i32, i32)>,
+    pub points: Vec<(f64, f64, Option<DateTime<Utc>>,)>,
     pub last_updated: std::time::SystemTime,
 }
 
@@ -15,7 +17,7 @@ impl SharedData {
         }
     }
 
-    pub fn update_points(&mut self, new_points: Vec<(i32, i32)>) {
+    pub fn update_points(&mut self, new_points: Vec<(f64, f64, Option<DateTime<Utc>>)>) {
         self.points = new_points;
         self.last_updated = std::time::SystemTime::now();
     }

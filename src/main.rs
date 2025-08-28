@@ -1,3 +1,4 @@
+use chrono::Datelike;
 use notify::{EventKind, RecursiveMode, Watcher};
 use std::error::{self, Error};
 use std::io::{BufRead, BufReader, Read};
@@ -7,6 +8,9 @@ use std::sync::mpsc::channel;
 use std::thread::AccessError;
 use tokio::net::TcpListener;
 use tokio::time::sleep;
+
+use crate::math::{flatten, normalize};
+use crate::util::{constants};
 
 mod math;
 mod plot;
@@ -48,7 +52,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn watch(shared_state: shared::SharedState) -> Result<(), Box<dyn std::error::Error>> {
     if let Ok(new_data) = util::read() {
         if let Ok(mut guard) = shared_state.write() {
-            guard.update_points(new_data);
+            guard.update_points(flatten(constants::CAM_HEIGHT, constants::CAM_ANGLE, constants::VIEW_WIDTH, constants::VIEW_HEIGHT, constants::FOV, &new_data));
+            dbg!(guard.points[0]);
+            println!("day: {}, month: {}, year: {}, time: {}", guard.points[0].2.unwrap().day(), guard.points[0].2.unwrap().month(), guard.points[0].2.unwrap().year(), guard.points[0].2.unwrap().time());
         } else {
             return Err(Box::new(util::Error::StateGuardError));
         }
@@ -82,13 +88,13 @@ async fn watch(shared_state: shared::SharedState) -> Result<(), Box<dyn std::err
 
                     if let Ok(new_data) = util::read() {
                         if let Ok(mut guard) = shared_state.write() {
-                            guard.update_points(new_data);
+                            guard.update_points(flatten(constants::CAM_HEIGHT, constants::CAM_ANGLE, constants::VIEW_WIDTH, constants::VIEW_HEIGHT, constants::FOV, &new_data));
                         } else {
                             return Err(Box::new(util::Error::StateGuardError));
                         }
 
                         println!("Updated shared state with {} points", {
-                            if let Ok(guard) = shared_state.write() {
+                            if let Ok(guard) = shared_state.read() {
                                 guard.points.len()
                             } else {
                                 return Err(Box::new(util::Error::StateGuardError));
