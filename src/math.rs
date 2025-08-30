@@ -1,4 +1,5 @@
 use rayon::prelude::*;
+use chrono::prelude::*;
 
 // Takes camera height(meters), camera angle(degrees), and camera view width and height(px), and a vector of 2d coordinates on the camera's view in pixel coords
 // and returns a vector of 2d coordinates projected onto the ground in world coordinates
@@ -8,8 +9,8 @@ pub fn flatten(
     view_width: f64,
     view_height: f64,
     fov: f64,
-    coords: &Vec<(i32, i32)>,
-) -> Vec<(f64, f64)> {
+    coords: &Vec<(f64, f64, Option<DateTime<Utc>>)>,
+) -> Vec<(f64, f64, Option<DateTime<Utc>>)> {
     let angle_rad = cam_angle.to_radians();
 
     // horizontal field of view
@@ -24,7 +25,7 @@ pub fn flatten(
     return coords
         .clone()
         .par_iter()
-        .filter_map(|&(x, y)| {
+        .filter_map(|&(x, y, time)| {
             // Convert pixel coordinates to normalized device coordinates (-1 to 1)
             let ndc_x = (2.0 * x as f64 / view_width) - 1.0;
             let ndc_y = 1.0 - (2.0 * y as f64 / view_height);
@@ -47,7 +48,17 @@ pub fn flatten(
             // Lateral distance (x-axis)
             let lateral_distance = forward_distance * ray_angle_x.tan();
 
-            Some((lateral_distance, forward_distance))
+            Some((lateral_distance, forward_distance, time))
         })
-        .collect::<Vec<(f64, f64)>>();
+        .collect::<Vec<(f64, f64, Option<DateTime<Utc>>)>>();
+}
+
+pub fn normalize(points: &Vec<(f64, f64)>) -> Vec<(f64, f64)> {
+    let x_max = 640.0;
+    let y_max = 480.0;
+
+    points
+        .iter()
+        .map(|&(x, y)| (x / x_max, y / y_max))
+        .collect()
 }
