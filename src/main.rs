@@ -10,7 +10,7 @@ use tokio::net::TcpListener;
 use tokio::time::sleep;
 
 use crate::math::{flatten, normalize};
-use crate::util::{constants};
+use crate::util::constants;
 
 mod math;
 mod plot;
@@ -20,10 +20,8 @@ mod util; // Add this
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Create shared state
     let shared_state = shared::new_shared_state();
 
-    // Initialize with current data
     if let Ok(initial_data) = util::read() {
         if let Ok(mut guard) = shared_state.write() {
             guard.update_points(initial_data);
@@ -52,9 +50,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn watch(shared_state: shared::SharedState) -> Result<(), Box<dyn std::error::Error>> {
     if let Ok(new_data) = util::read() {
         if let Ok(mut guard) = shared_state.write() {
-            guard.update_points(flatten(constants::CAM_HEIGHT, constants::CAM_ANGLE, constants::VIEW_WIDTH, constants::VIEW_HEIGHT, constants::FOV, &new_data));
+            guard.update_points(flatten(
+                constants::CAM_HEIGHT,
+                constants::CAM_ANGLE,
+                constants::VIEW_WIDTH,
+                constants::VIEW_HEIGHT,
+                constants::FOV,
+                &new_data,
+            ));
             dbg!(guard.points[0]);
-            println!("day: {}, month: {}, year: {}, time: {}", guard.points[0].2.unwrap().day(), guard.points[0].2.unwrap().month(), guard.points[0].2.unwrap().year(), guard.points[0].2.unwrap().time());
+            println!(
+                "day: {}, month: {}, year: {}, time: {}",
+                guard.points[0].2.unwrap().day(),
+                guard.points[0].2.unwrap().month(),
+                guard.points[0].2.unwrap().year(),
+                guard.points[0].2.unwrap().time()
+            );
         } else {
             return Err(Box::new(util::Error::StateGuardError));
         }
@@ -88,7 +99,14 @@ async fn watch(shared_state: shared::SharedState) -> Result<(), Box<dyn std::err
 
                     if let Ok(new_data) = util::read() {
                         if let Ok(mut guard) = shared_state.write() {
-                            guard.update_points(flatten(constants::CAM_HEIGHT, constants::CAM_ANGLE, constants::VIEW_WIDTH, constants::VIEW_HEIGHT, constants::FOV, &new_data));
+                            guard.update_points(flatten(
+                                constants::CAM_HEIGHT,
+                                constants::CAM_ANGLE,
+                                constants::VIEW_WIDTH,
+                                constants::VIEW_HEIGHT,
+                                constants::FOV,
+                                &new_data,
+                            ));
                         } else {
                             return Err(Box::new(util::Error::StateGuardError));
                         }

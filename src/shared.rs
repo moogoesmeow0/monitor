@@ -20,6 +20,7 @@ impl SharedData {
     pub fn update_points(&mut self, new_points: Vec<(f64, f64, Option<DateTime<Utc>>)>) {
         self.points = new_points;
         self.last_updated = std::time::SystemTime::now();
+        self.points.sort_by_key(|f| f.2.map_or(i64::MAX, |s| s.timestamp()));
     }
 }
 

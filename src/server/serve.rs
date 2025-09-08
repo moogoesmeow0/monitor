@@ -34,8 +34,39 @@ fn get_stats(
     }
 }
 
+#[get("/data/<index>")]
+fn get_item(index: usize, shared_state: &State<SharedState>) -> Option<Json<(f64, f64, String)>> {
+    let data = shared_state.read().ok()?;
+    data.points
+        .get(index)
+        .cloned()
+        .and_then(|f| f.2.map(|s| (f.0, f.1, s.to_string())))
+        .map(Json)
+}
+
+#[get("/data/<begin>/<end>")]
+fn get_range(
+    begin: usize,
+    end: usize,
+    shared_state: &State<SharedState>,
+) -> Option<Json<Vec<(f64, f64, String)>>> {
+    let data = shared_state.read().ok()?;
+
+    if begin >= end {
+        return None;
+    };
+
+    let points = data.points.get(begin..end)?;
+    let result: Vec<(f64, f64, String)> = points
+        .iter()
+        .filter_map(|p| p.2.as_ref().map(|s| (p.0, p.1, s.clone().to_string())))
+        .collect();
+    
+    Some(Json(result))
+}
+
 pub fn rocket(shared_state: SharedState) -> rocket::Rocket<rocket::Build> {
     rocket::build()
         .manage(shared_state)
-        .mount("/", routes![serve_image, get_data, get_stats])
+        .mount("/", routes![serve_image, get_data, get_stats, get_range, get_item])
 }
